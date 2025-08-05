@@ -27,9 +27,9 @@ generator client {
 // Users synced from Clerk
 model User {
   id           String   @id @default(cuid())
+  clerkId      String   @unique
   fullName     String
   email        String   @unique
-  clerkId      String   @unique
   createdAt    DateTime @default(now())
   lastSignedIn DateTime?
 }
