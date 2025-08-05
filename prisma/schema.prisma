@@ -15,7 +15,6 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["clientExtensions"]
 }
 
 // 2. Enums
@@ -36,25 +35,26 @@ enum TicketStatus {
 
 // Users synced from Clerk
 model User {
-  id            String    @id @default(cuid())
-  clerkId       String    @unique
-  email         String    @unique
-  role          UserRole  @default(VIEWER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastSignedIn  DateTime?  // 👈 Nullable — jab tak login na ho
-  profile       Profile?
-  events        Event[]   @relation("CreatorEvents")
-  bookings      Booking[]
-  reviews       Review[]
-  favorites     Favorite[]
+  id           String     @id @default(cuid())
+  clerkId      String     @unique
+  email        String     @unique
+  role         UserRole   @default(VIEWER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  lastSignedIn DateTime? // 👈 Nullable — jab tak login na ho
+  profile      Profile?
+  events       Event[]    @relation("CreatorEvents")
+  bookings     Booking[]
+  reviews      Review[]
+  favorites    Favorite[]
+  auditLogs    AuditLog[]
 }
 
 // Extended profile info
 model Profile {
-  id          String   @id @default(cuid())
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String   @unique
+  id          String  @id @default(cuid())
+  user        User    @relation(fields: [userId], references: [id])
+  userId      String  @unique
   displayName String?
   bio         String?
   avatarUrl   String?
@@ -78,6 +78,7 @@ model Event {
   favorites   Favorite[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  bookings    Booking[]
 }
 
 model Category {
@@ -87,14 +88,14 @@ model Category {
 }
 
 model Ticket {
-  id        String       @id @default(cuid())
-  event     Event        @relation(fields: [eventId], references: [id])
-  eventId   String
-  type      String
-  price     Float
-  quantity  Int
-  status    TicketStatus @default(AVAILABLE)
-  bookings  Booking[]
+  id       String       @id @default(cuid())
+  event    Event        @relation(fields: [eventId], references: [id])
+  eventId  String
+  type     String
+  price    Float
+  quantity Int
+  status   TicketStatus @default(AVAILABLE)
+  bookings Booking[]
 }
 
 model Booking {
@@ -106,16 +107,16 @@ model Booking {
   ticket     Ticket   @relation(fields: [ticketId], references: [id])
   ticketId   String
   quantity   Int      @default(1)
-  totalPrice Float    
+  totalPrice Float
   createdAt  DateTime @default(now())
 }
 
 model EventMedia {
-  id        String   @id @default(cuid())
-  event     Event    @relation(fields: [eventId], references: [id])
-  eventId   String
-  url       String
-  type      String
+  id      String @id @default(cuid())
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String
+  url     String
+  type    String
 }
 
 model Review {
