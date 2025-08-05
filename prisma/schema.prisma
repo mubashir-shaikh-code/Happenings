@@ -19,131 +19,20 @@ generator client {
 
 // 2. Enums
 
-enum UserRole {
-  VIEWER
-  CREATOR
-  ADMIN
-}
 
-enum TicketStatus {
-  AVAILABLE
-  SOLD_OUT
-  CANCELLED
-}
+
 
 // 3. Models
 
 // Users synced from Clerk
 model User {
-  id           String     @id @default(cuid())
-  clerkId      String     @unique
-  email        String     @unique
-  role         UserRole   @default(VIEWER)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  lastSignedIn DateTime? // 👈 Nullable — jab tak login na ho
-  profile      Profile?
-  events       Event[]    @relation("CreatorEvents")
-  bookings     Booking[]
-  reviews      Review[]
-  favorites    Favorite[]
-  auditLogs    AuditLog[]
+  id           String   @id @default(cuid())
+  fullName     String
+  email        String   @unique
+  clerkId      String   @unique
+  createdAt    DateTime @default(now())
+  lastSignedIn DateTime?
 }
 
-// Extended profile info
-model Profile {
-  id          String  @id @default(cuid())
-  user        User    @relation(fields: [userId], references: [id])
-  userId      String  @unique
-  displayName String?
-  bio         String?
-  avatarUrl   String?
-  location    String?
-}
 
-model Event {
-  id          String       @id @default(cuid())
-  title       String
-  description String
-  category    Category?    @relation(fields: [categoryId], references: [id])
-  categoryId  String?
-  creator     User         @relation("CreatorEvents", fields: [creatorId], references: [id])
-  creatorId   String
-  startTime   DateTime
-  endTime     DateTime
-  status      String       @default("DRAFT")
-  tickets     Ticket[]
-  media       EventMedia[]
-  reviews     Review[]
-  favorites   Favorite[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  bookings    Booking[]
-}
 
-model Category {
-  id     String  @id @default(cuid())
-  name   String  @unique
-  events Event[]
-}
-
-model Ticket {
-  id       String       @id @default(cuid())
-  event    Event        @relation(fields: [eventId], references: [id])
-  eventId  String
-  type     String
-  price    Float
-  quantity Int
-  status   TicketStatus @default(AVAILABLE)
-  bookings Booking[]
-}
-
-model Booking {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
-  event      Event    @relation(fields: [eventId], references: [id])
-  eventId    String
-  ticket     Ticket   @relation(fields: [ticketId], references: [id])
-  ticketId   String
-  quantity   Int      @default(1)
-  totalPrice Float
-  createdAt  DateTime @default(now())
-}
-
-model EventMedia {
-  id      String @id @default(cuid())
-  event   Event  @relation(fields: [eventId], references: [id])
-  eventId String
-  url     String
-  type    String
-}
-
-model Review {
-  id        String   @id @default(cuid())
-  event     Event    @relation(fields: [eventId], references: [id])
-  eventId   String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  rating    Int      @default(5)
-  comment   String?
-  createdAt DateTime @default(now())
-}
-
-model Favorite {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  event     Event    @relation(fields: [eventId], references: [id])
-  eventId   String
-  createdAt DateTime @default(now())
-}
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  action    String
-  actorId   String?
-  actor     User?    @relation(fields: [actorId], references: [id])
-  target    String?
-  createdAt DateTime @default(now())
-}

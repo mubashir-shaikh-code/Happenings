@@ -1,80 +1,62 @@
-// app/(backend)/api/auth/clerk-webhooks/route.js
+// app/api/clerk-webhooks/route.js
+
+import { NextResponse } from 'next/server'
 import { verifyWebhook } from '@clerk/nextjs/webhooks'
 import prisma from '@/lib/prisma'
-import { NextResponse } from 'next/server'
 
-export const POST = async (req) => {
-    try {
-        // 1. Clerk webhook verify
-        const evt = await verifyWebhook(req)
-        const { type, data } = evt
+export async function POST(req) {
+  let evt
+  try {
+    evt = await verifyWebhook(req)
+  } catch (err) {
+    console.error('🔴 Webhook signature verification failed:', err)
+    return NextResponse.json({ error: 'Invalid webhook' }, { status: 400 })
+  }
 
-        // 2. Handle different event types
-        switch (type) {
-            case 'user.created': {
-                const { id: clerkId, email_addresses, first_name, last_name, created_at } = data
-                const email = email_addresses?.[0]?.email_address || ''
-                const fullName = [first_name, last_name].filter(Boolean).join(' ')
-                await prisma.user.create({
-                    data: {
-                        clerkId,
-                        email,
-                        fullName,
-                        createdAt: new Date(created_at),
-                    }
-                })
-                console.log(`User ${clerkId} created`)
-                break
-            }
+  const { type, data } = evt
 
-            case 'session.created': {
-                const { user_id: clerkId, last_active_at } = data
-                await prisma.user.update({
-                    where: { clerkId },
-                    data: { lastSignedIn: new Date(last_active_at) }
-                })
-                console.log(`User ${clerkId} lastSignedIn updated`)
-                break
-            }
+  try {
+    switch (type) {
+      case 'user.created': {
+        const email = data.email_addresses?.[0]?.email_address
+        // Clerk sends `first_name` and `last_name` and also `full_name`
+        const fullName = data.full_name
+          ?? [data.first_name, data.last_name].filter(Boolean).join(' ')
+        await prisma.user.create({
+          data: {
+            clerkId: data.id,
+            email, 
+            fullName,
+            // override Prisma default if you want Clerk's timestamp:
+            createdAt: new Date(data.created_at),
+          },
+        })
+        break
+      }
 
-            case 'user.updated': {
-                const { id: clerkId, email_addresses, first_name, last_name } = data
-                const email = email_addresses?.[0]?.email_address || ''
-                const fullName = [first_name, last_name].filter(Boolean).join(' ')
-                await prisma.user.upsert({
-                    where: { clerkId },
-                    create: {
-                        clerkId,
-                        email,
-                        fullName,
-                        createdAt: new Date(data.created_at || Date.now()),
-                    },
-                    update: {
-                        email,
-                        fullName,
-                    }
-                })
-                console.log(`User ${clerkId} updated`)
-                break
-            }
+      case 'user.deleted':
+        await prisma.user.delete({
+          where: { clerkId: data.id },
+        })
+        break
 
-            case 'user.deleted': {
-                const { id: clerkId } = data
-                await prisma.user.delete({ where: { clerkId } })
-                console.log(`User ${clerkId} deleted`)
-                break
-            }
+      case 'session.created':
+        await prisma.user.update({
+          where: { clerkId: data.user_id },
+          data: {
+            lastSignedIn: new Date(data.created_at),
+          },
+        })
+        break
 
-            default:
-                console.log(`Unhandled event type ${type}`)
-        }
-
-        return NextResponse.json('Webhook processed ✅', { status: 200 })
-    } catch (err) {
-        console.error('❌ Webhook error:', err)
-        return NextResponse.json(
-            { error: 'Webhook handler failed', message: err.message },
-            { status: 400 }
-        )
+      default:
+        // ignore other events
+        break
     }
+
+    return NextResponse.json({ received: true }, { status: 200 })
+  } catch (dbErr) {
+    console.error('🔴 Database sync error:', dbErr)
+    return NextResponse.json({ error: 'Database error' }, { status: 500 })
+  }
 }
