@@ -1,13 +1,4 @@
-// Prisma schema for Event Discovery Platform with Clerk integration
-// ---------------------------------------
-// 1. Use MySQL connector
-// 2. Define core models
-// 3. Keep roles in User
-// 4. Add optional models
-// ---------------------------------------
-
-// 1. Datasource & Generator
-
+// Datasource & Generator
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -17,22 +8,50 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 2. Enums
+// Enums
+enum UserRole {
+  VIEWER
+  CREATOR
+}
 
-
-
-
-// 3. Models
+enum Category {
+  ANYTHING
+  WEEKENDS
+  DINING
+  SHOPPING
+  STAY
+}
 
 // Users synced from Clerk
 model User {
-  id           String   @id @default(cuid())
-  clerkId      String   @unique
+  id           String    @id @default(cuid())
+  clerkId      String    @unique
   fullName     String
-  email        String   @unique
-  createdAt    DateTime @default(now())
+  email        String    @unique
+  role         UserRole  @default(VIEWER)
+  // Ye Event kis User ne banaya — wo relation banaya ja raha hai.
+  events       Event[] // kis user ne event banaya uska relation, 1 User → many Events
+  createdAt    DateTime  @default(now())
   lastSignedIn DateTime?
 }
 
+model Event {
+  id            String   @id @default(cuid())
+  // creatorId field me wo User ka ID save hota hai.
+  // references: [id] ka matlab: Prisma ye dekhega ke User model me id field kis ki hai — aur creatorId us id se match karega.
+  creator       User     @relation(fields: [creatorId], references: [id])
+  creatorId     String
+  organizer     String
+  title         String
+  description   String
+  category      Category
+  tags          String // Comma-separated: "music,tech,fun"
+  venue         String
+  startDate     DateTime
+  endDate       DateTime
+  imageUrls     String // Comma-separated: "url1,url2,url3"
+  ticketLink    String
+  adminApproved Boolean  @default(false)
+}
 
-
+// ask gpt how your table will look so i decided no need to add name aur email.

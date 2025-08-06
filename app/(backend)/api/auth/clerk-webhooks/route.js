@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { verifyWebhook } from '@clerk/nextjs/webhooks'
 import prisma from '@/lib/prisma'
 
-export async function POST(req) {
+export const POST = async (req) => {
     let evt
     try {
         evt = await verifyWebhook(req)
