@@ -26,7 +26,7 @@ export const POST = async (req) => {
             case "user.created": {
                 // Use upsert so duplicate errors don't break if user existed
                 const clerkId = data.id;
-                const email = data.email_addresses?.[0]?.email_address ?? null;
+                const email = data.email_addresses?.[0]?.email_address ?? undefined;
                 const fullName =
                     data.full_name ??
                     [data.first_name, data.last_name].filter(Boolean).join(" ") ??
@@ -39,8 +39,6 @@ export const POST = async (req) => {
                         fullName,
                         email,
                         role,
-                        // keep createdAt if present, otherwise set now
-                        createdAt: data.created_at ? new Date(data.created_at) : undefined,
                     },
                     create: {
                         clerkId,
@@ -61,6 +59,8 @@ export const POST = async (req) => {
                     [data.first_name, data.last_name].filter(Boolean).join(" ") ??
                     "Unknown";
                 const role = mapClerkRoleToEnum(data.public_metadata?.role);
+
+                console.log("user.updated payload:", { clerkId, incomingEmail, fullName, role });
 
                 // build update object only with present fields
                 const updatePayload = {};
