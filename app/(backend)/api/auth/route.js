@@ -10,7 +10,6 @@ function mapClerkRoleToEnum(role) {
     return "VIEWER";
 }
 
-
 export const POST = async (req) => {
     let evt;
     try {
