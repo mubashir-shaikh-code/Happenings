@@ -60,7 +60,7 @@ export const POST = async (req) => {
                     "Unknown";
                 const role = mapClerkRoleToEnum(data.public_metadata?.role);
 
-                console.log("user.updated payload:", { clerkId, incomingEmail, fullName, role });
+                console.log("user.updated payload:", { clerkId, email, fullName, role });
 
                 // build update object only with present fields
                 const updatePayload = {};
