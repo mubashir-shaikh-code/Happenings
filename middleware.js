@@ -1,31 +1,40 @@
 // middleware.js
-import { clerkMiddleware, getAuth } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { clerkMiddleware, createRouteMatcher, getAuth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
+const isCreatorRoute = createRouteMatcher(["/creator(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, sessionClaims } = auth
-  const { pathname } = req.nextUrl
 
-  // If visiting /admin and already logged in → redirect
-  if (pathname === '/admin' && userId) {
-    return NextResponse.redirect(new URL('/admin/dashboard', req.url))
+  if (isAdminRoute(req)) {
+    const { sessionClaims } = await auth();
+    const roleClaim = sessionClaims?.metadata?.role;
+    const isAdmin = !!roleClaim && String(roleClaim).toUpperCase() === "ADMIN";
+
+    if (!isAdmin) {
+      const url = new URL("/", req.url);
+      return NextResponse.redirect(url);
+    }
+    return;
   }
 
-  // Protect admin routes (except /admin login page)
-  if (pathname.startsWith('/admin') && pathname !== '/admin') {
+  if (isCreatorRoute(req)) {
+    const { userId } = await auth();
+
     if (!userId) {
-      return NextResponse.redirect(new URL('/admin', req.url))
+      const signInUrl = new URL("/", req.url);
+      return NextResponse.redirect(signInUrl);
     }
-    if (sessionClaims?.publicMetadata?.role !== 'admin') {
-      return NextResponse.redirect(new URL('/', req.url))
-    }
+    return;
   }
-
-  return NextResponse.next()
-})
+});
 
 export const config = {
   matcher: [
-    '/admin/:path*'
-  ],
-}
+    // Skip Next.js internals and all static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)'
+  ]
+};

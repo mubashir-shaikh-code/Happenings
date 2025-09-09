@@ -6,44 +6,62 @@ import {
   SignedIn,
   SignedOut,
   SignInButton,
-  UserButton
+  UserButton,
+  useAuth
 } from '@clerk/nextjs'
 import Link from 'next/link'
 import { Button } from './ui/button'
 import { usePathname } from 'next/navigation'
+import { Toaster } from './ui/sonner'
 
-export default function Providers({ children }) {
+function HeaderContent() {
   const pathname = usePathname()
+  const { sessionClaims } = useAuth()
 
-  const hideHeaderRoutes = ['/admin', '/creator-dashboard']
+  const hideHeaderRoutes = ['/admin', '/creator']
   const shouldHideHeader = hideHeaderRoutes.some(route =>
     pathname === route || pathname.startsWith(`${route}/`)
   )
 
+  const roleClaim = sessionClaims?.metadata?.role;
+  const isAdmin = !!roleClaim && String(roleClaim).toUpperCase() === "ADMIN";
+
+  if (shouldHideHeader) {
+    return null;
+  }
+
+  return (
+    <header className="flex justify-between items-center sticky top-0 bg-white z-[100] p-4 gap-4 h-16 border-b">
+      <div>
+        <Link href='/'><h2 className='text-xl font-serif'>Happenings</h2></Link>
+      </div>
+      <div className='flex items-center space-x-2'>
+        <SignedOut>
+          <SignInButton>
+            <Button>
+              SignIn
+            </Button>
+          </SignInButton>
+        </SignedOut>
+        <SignedIn>
+          {!isAdmin && (
+            <Link href='/creator/manage-events/create-event'>
+              <Button variant="ghost">Become a Creator</Button>
+            </Link>
+          )}
+          <UserButton />
+        </SignedIn>
+      </div>
+    </header>
+  )
+}
+
+export default function Providers({ children }) {
   return (
     <ClerkProvider>
-      {!shouldHideHeader && (
-
-        <header className="bg-gray-200 flex justify-between items-center p-4 gap-4 h-16">
-          <div>
-            <Link href='/'><h2 className='text-xl font-semibold'>Happenings</h2></Link>
-          </div>
-          <div className='flex items-center space-x-2'>
-            <Link href='/create-event'><Button>Become a Creator</Button></Link>
-            <SignedOut>
-              <SignInButton>
-                <button className="bg-green-600 text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
-                  SignIn/SignUp
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </div>
-        </header>
-      )}
+      <HeaderContent />
       {children}
-    </ClerkProvider >
+      <Toaster />
+    </ClerkProvider>
   )
 }

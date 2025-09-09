@@ -1,6 +1,6 @@
 import React from 'react'
 
-const AdminPage = () => {
+const CreatorPage = () => {
   return (
       <div className='text-center text-2xl font-serif'>
         🎉Welcome Back🎉
@@ -8,4 +8,4 @@ const AdminPage = () => {
   )
 }
 
-export default AdminPage
+export default CreatorPage

@@ -1,9 +1,12 @@
 import React from 'react'
+import ListedEvents from '@/components/ListedEvents';
 
-const ListedEventsPage = () => {
+const AdminListedEventsPage = () => {
   return (
-    <div>ListedEventsPage</div>
+    <div>
+      <ListedEvents />
+    </div>
   )
 }
 
-export default ListedEventsPage
+export default AdminListedEventsPage;

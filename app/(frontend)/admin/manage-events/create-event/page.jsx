@@ -1,9 +1,12 @@
 import React from 'react'
+import CreateEventForm from '@/components/CreateEventForm'
 
-const CreateEventPage = () => {
+const AdminCreateEventPage = () => {
   return (
-    <div>CreateEventPage</div>
+    <div>
+      <CreateEventForm />
+    </div>
   )
 }
 
-export default CreateEventPage
+export default AdminCreateEventPage
