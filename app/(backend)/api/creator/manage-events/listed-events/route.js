@@ -1,4 +1,3 @@
-// api/creator/manage-events/listed-events/route.js
 import prisma from "@/lib/prisma";
 
 export const GET = async () => {

@@ -12,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import BackToTop from '@/components/BackToTop';
 import FilterDialog from '@/components/FilterDialog';
 import useEventsFilter from './hooks/useEventsFilter';
+import { debounce } from 'lodash';
+import SearchBox from '@/components/Search';
 
 const SkeletonCard = () => {
   return (
@@ -67,7 +69,6 @@ const EventsPage = () => {
     events,
     pagination,
     filters,
-    loading,
     error,
     handleFilterChange,
     applyFilters,
@@ -77,9 +78,63 @@ const EventsPage = () => {
     activeFiltersCount,
   } = useEventsFilter();
 
-  const [searchTerm, setSearchTerm] = useState(filters.search || '');
   const [sortBy, setSortBy] = useState('newest');
   const [filterOpen, setFilterOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const [loading, setLoading] = useState(false);
+
+  const debouncedSearch = useCallback(
+    debounce(async (query) => {
+      if (query.length < 2) {
+        setSuggestions([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        // Your API call to fetch suggestions
+        const response = await fetch(`/api/search-suggestions?q=${query}`);
+        const data = await response.json();
+        setSuggestions(data);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setLoading(false);
+      }
+    }, 300),
+    []
+  );
+
+  const handleKeyDown = (e) => {
+    if (!showSuggestions) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setActiveSuggestion(prev =>
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveSuggestion(prev => prev > 0 ? prev - 1 : -1);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeSuggestion >= 0) {
+          setSuggestions(suggestions[activeSuggestion]);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setActiveSuggestion(-1);
+        break;
+    }
+  };
 
   const resetFiltersLocally = useCallback(() => {
     const defaultFilters = {
@@ -99,13 +154,13 @@ const EventsPage = () => {
     applyFilters();
   }, [applyFilters]);
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      searchEvents(searchTerm);
-    }, 450);
+  // useEffect(() => {
+  //   const t = setTimeout(() => {
+  //     searchEvents(searchTerm);
+  //   }, 450);
 
-    return () => clearTimeout(t);
-  }, [searchTerm, searchEvents]);
+  //   return () => clearTimeout(t);
+  // }, [searchTerm, searchEvents]);
 
   const parseTags = (tagsData) => {
     if (!tagsData) return [];
@@ -262,16 +317,7 @@ const EventsPage = () => {
         </div>
 
         <div className="flex flex-col gap-3 max-w-5xl mx-auto mb-10">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search events by title, organizer, venue, category"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-              disabled={loading}
-            />
-          </div>
+          <SearchBox />
 
           <div className='flex justify-between gap-4'>
             <div>
@@ -317,21 +363,6 @@ const EventsPage = () => {
         <div className="max-w-7xl mx-auto">
           {loading ? (
             <SkeletonGrid count={8} />
-          ) : filteredAndSortedEvents.length === 0 ? (
-            <div className="flex h-64 items-center justify-center rounded-md border border-dashed">
-              <div className="text-center">
-                <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium">
-                  {searchTerm ? 'No events found' : 'Loading Events...'}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {searchTerm
-                    ? 'Try adjusting your search terms or filters.'
-                    : ''
-                  }
-                </p>
-              </div>
-            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {filteredAndSortedEvents.map((event) => (
