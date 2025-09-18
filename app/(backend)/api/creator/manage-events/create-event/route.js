@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import ImageKit from 'imagekit';
 import { getAuth } from '@clerk/nextjs/server';
-import { pool } from '@/lib/db'; // <-- our MySQL connection
+import pool  from '@/lib/db'; // <-- our MySQL connection
 
 // ImageKit instance
 const imagekit = new ImageKit({

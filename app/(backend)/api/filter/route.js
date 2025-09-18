@@ -1,6 +1,6 @@
 // api/filter/route.js
 import { NextResponse } from "next/server";
-import { pool } from "@/lib/db"; // <-- make sure lib/db.js exists with mysql2 config
+import pool from "@/lib/db"; // <-- make sure lib/db.js exists with mysql2 config
 
 // --- Utility functions ---
 const parseDate = (dateString) => {

@@ -1,7 +1,7 @@
 // app/api/creator/manage-events/request-status/route.js
 import { NextResponse } from 'next/server';
 import { getAuth } from '@clerk/nextjs/server';
-import { pool } from '@/lib/db'; // ✅ make sure you have db.js that exports pool
+import pool from '@/lib/db'; // ✅ make sure you have db.js that exports pool
 
 export async function GET(req) {
     try {
