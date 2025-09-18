@@ -1,63 +1,66 @@
-// api/creator/manage-events/request-status/route.js
+// app/api/creator/manage-events/request-status/route.js
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { getAuth } from '@clerk/nextjs/server';
+import { pool } from '@/lib/db'; // ✅ make sure you have db.js that exports pool
 
 export async function GET(req) {
     try {
-        const { userId } = getAuth(req)
+        // ✅ Get logged-in Clerk user
+        const { userId } = getAuth(req);
 
-        const user = await prisma.user.findUnique({
-            where: {
-                clerkId: userId,
-            },
-            select: {
-                id: true,
-                email: true,
-            },
-        });
-        if (!user) {
+        if (!userId) {
             return NextResponse.json(
-                { error: 'User not found in database' },
+                { success: false, error: 'Unauthorized: No user ID found' },
+                { status: 401 }
+            );
+        }
+
+        // ✅ Fetch user from DB
+        const [userRows] = await pool.query(
+            `SELECT id, email FROM User WHERE clerkId = ? LIMIT 1`,
+            [userId]
+        );
+
+        if (userRows.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'User not found in database' },
                 { status: 404 }
             );
         }
 
-        const creatorId = user.id;
-        const creatorEmail = user.email;
+        const { id: creatorId, email: creatorEmail } = userRows[0];
 
-        const requests = await prisma.eventRequest.findMany({
-            where: {
-                AND: [
-                    { requestedById: creatorId },
-                    { requestedByEmail: creatorEmail },
-                ],
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-            select: {
-                id: true,
-                status: true,
-                createdAt: true,
-                event: {
-                    select: {
-                        id: true,
-                        title: true,
-                        startDateTime: true,
-                        endDateTime: true,
-                        organizer: true,
-                        venue: true,
-                    },
-                },
-            },
+        // ✅ Fetch event requests for this creator
+        const [requests] = await pool.query(
+            `
+            SELECT 
+                er.id, 
+                er.status, 
+                er.createdAt,
+                e.id AS eventId,
+                e.title,
+                e.startDateTime,
+                e.endDateTime,
+                e.organizer,
+                e.venue
+            FROM EventRequest er
+            JOIN Event e ON er.eventId = e.id
+            WHERE er.requestedById = ? AND er.requestedByEmail = ?
+            ORDER BY er.createdAt DESC
+            `,
+            [creatorId, creatorEmail]
+        );
+
+        return NextResponse.json({
+            success: true,
+            count: requests.length,
+            requests,
         });
 
-        return NextResponse.json(requests);
     } catch (error) {
-        console.error('Error fetching event requests:', error);
+        console.error('🔴 Error fetching event requests:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { success: false, error: 'Internal server error' },
             { status: 500 }
         );
     }
