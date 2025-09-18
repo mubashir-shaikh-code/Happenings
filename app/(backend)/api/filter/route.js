@@ -1,6 +1,6 @@
-// api/filter/route.js
+// app/api/filter/route.js
 import { NextResponse } from "next/server";
-import pool from "@/lib/db"; // <-- make sure lib/db.js exists with mysql2 config
+import pool from "@/lib/db"; // MySQL pool (mysql2/promise)
 
 // --- Utility functions ---
 const parseDate = (dateString) => {
@@ -54,6 +54,7 @@ const getDateRange = (timeFilter, startDate, endDate) => {
   }
 };
 
+// --- Build SQL filters ---
 const buildSQLFilters = ({ category, tags, timeFilter, startDate, endDate, location, search }) => {
   let whereClauses = ["e.adminApproved = 1"];
   let params = [];
@@ -98,7 +99,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const queryParams = Object.fromEntries(searchParams.entries());
 
-    // Parse tags
+    // Parse tags as array
     if (queryParams.tags) {
       try {
         queryParams.tags = JSON.parse(queryParams.tags);
@@ -115,7 +116,6 @@ export async function GET(request) {
 
     const { whereSQL, params } = buildSQLFilters(queryParams);
 
-    // Query events
     const [events] = await pool.query(
       `SELECT e.*, u.fullName, u.email 
        FROM Event e
@@ -126,7 +126,6 @@ export async function GET(request) {
       [...params, limit, offset]
     );
 
-    // Count total
     const [[{ totalCount }]] = await pool.query(
       `SELECT COUNT(*) as totalCount FROM Event e ${whereSQL}`,
       params

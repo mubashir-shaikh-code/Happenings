@@ -23,26 +23,7 @@ export const POST = async (req) => {
 
   try {
     switch (type) {
-      case "user.created": {
-        const clerkId = data.id;
-        const email = data.email_addresses?.[0]?.email_address ?? null;
-        const fullName =
-          data.full_name ??
-          [data.first_name, data.last_name].filter(Boolean).join(" ") ??
-          "Unknown";
-        const role = mapClerkRoleToEnum(data.public_metadata?.role);
-        const createdAt = data.created_at ? new Date(data.created_at) : new Date();
-
-        // Upsert user (replace if exists)
-        await pool.query(
-          `INSERT INTO User (clerkId, fullName, email, role, createdAt)
-           VALUES (?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE fullName = VALUES(fullName), email = VALUES(email), role = VALUES(role)`,
-          [clerkId, fullName, email, role, createdAt]
-        );
-        break;
-      }
-
+      case "user.created":
       case "user.updated": {
         const clerkId = data.id;
         const email = data.email_addresses?.[0]?.email_address ?? null;
@@ -53,6 +34,7 @@ export const POST = async (req) => {
         const role = mapClerkRoleToEnum(data.public_metadata?.role);
         const createdAt = data.created_at ? new Date(data.created_at) : new Date();
 
+        // Upsert user in MySQL
         await pool.query(
           `INSERT INTO User (clerkId, fullName, email, role, createdAt)
            VALUES (?, ?, ?, ?, ?)
@@ -80,6 +62,7 @@ export const POST = async (req) => {
       }
 
       default:
+        console.warn("Unhandled Clerk webhook type:", type);
         break;
     }
 

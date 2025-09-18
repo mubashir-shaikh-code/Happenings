@@ -10,36 +10,39 @@ export async function GET(request) {
 
     if (!query) {
       return NextResponse.json(
-        { error: "Query parameter q is required" },
+        { success: false, error: "Query parameter 'q' is required" },
         { status: 400 }
       );
     }
 
     const offset = (page - 1) * limit;
 
-    // Build WHERE clause dynamically
-    let whereClause = "WHERE adminApproved = 1";
-    let params = [];
-
-    if (query) {
-      whereClause += ` AND (
+    // Dynamic WHERE clause
+    const whereClause = `
+      WHERE adminApproved = 1
+      AND (
         title LIKE ? OR
         organizer LIKE ? OR
         description LIKE ? OR
         venue LIKE ? OR
         tags LIKE ?
-      )`;
-      params = Array(5).fill(`%${query}%`);
-    }
+      )
+    `;
 
-    // Query events with pagination
+    const params = Array(5).fill(`%${query}%`);
+
+    // Fetch paginated events
     const [events] = await pool.query(
-      `SELECT * FROM Event
-       ${whereClause}
-       ORDER BY startDateTime ASC
-       LIMIT ? OFFSET ?`,
+      `SELECT * FROM Event ${whereClause} ORDER BY startDateTime ASC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
+
+    // Transform tags and imageUrls
+    const transformedEvents = events.map((event) => ({
+      ...event,
+      tags: event.tags ? event.tags.split(",").map((t) => t.trim()) : [],
+      imageUrls: event.imageUrls ? event.imageUrls.split(",").map((u) => u.trim()) : [],
+    }));
 
     // Count total matching events
     const [[{ count }]] = await pool.query(
@@ -60,13 +63,13 @@ export async function GET(request) {
           hasPreviousPage: page > 1,
           limit,
         },
-        events,
+        events: transformedEvents,
       },
     });
   } catch (error) {
     console.error("Search error:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: "Internal server error", message: error.message },
       { status: 500 }
     );
   }
